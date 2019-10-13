@@ -44,6 +44,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <std_msgs/Bool.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/Int16.h>
 #include <std_msgs/UInt16.h>
 #include <std_msgs/UInt8MultiArray.h>
@@ -55,9 +56,9 @@ POSSIBILITY OF SUCH DAMAGE.
 static const double MAX_DBL = std::numeric_limits<double>::max();
 static const double COVARIANCE[36] = {1e-5, 1e-5, 0.0,     0.0,     0.0,     1e-5,  // NOLINT(whitespace/braces)
                                       1e-5, 1e-5, 0.0,     0.0,     0.0,     1e-5,
-                                      0.0,  0.0,  MAX_DBL, 0.0,     0.0,     0.0,
-                                      0.0,  0.0,  0.0,     MAX_DBL, 0.0,     0.0,
-                                      0.0,  0.0,  0.0,     0.0,     MAX_DBL, 0.0,
+                                      0.0,  0.0,  1e6,     0.0,     0.0,     0.0,
+                                      0.0,  0.0,  0.0,     1e6,     0.0,     0.0,
+                                      0.0,  0.0,  0.0,     0.0,     1e6,     0.0,
                                       1e-5, 1e-5, 0.0,     0.0,     0.0,     1e-5};
 
 class CreateDriver
@@ -79,7 +80,11 @@ private:
   std_msgs::Int16 int16_msg_;
   sensor_msgs::JointState joint_state_msg_;
   bool is_running_slowly_;
-
+  
+  int cnt_main_deb;
+  int cnt_side_deb;
+  int cnt_vacu_deb;
+  
   // ROS params
   std::string dev_;
   std::string base_frame_;
@@ -98,8 +103,14 @@ private:
   void setASCIICallback(const std_msgs::UInt8MultiArrayConstPtr& msg);
   void dockCallback(const std_msgs::EmptyConstPtr& msg);
   void undockCallback(const std_msgs::EmptyConstPtr& msg);
+  void setPassive(const std_msgs::EmptyConstPtr& msg);
   void defineSongCallback(const ca_msgs::DefineSongConstPtr& msg);
   void playSongCallback(const ca_msgs::PlaySongConstPtr& msg);
+  void setMainMotor(const std_msgs::Float32MultiArrayConstPtr& msg);
+  void setSideMotor(const std_msgs::Float32MultiArrayConstPtr& msg);
+  void setVacuumMotor(const std_msgs::Float32MultiArrayConstPtr& msg);
+  void setAllMotors(const std_msgs::Float32MultiArrayConstPtr& msg);
+  void debouceSet(void);
 
   bool update();
   void updateBatteryDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& stat);
@@ -128,8 +139,13 @@ protected:
   ros::Subscriber set_ascii_sub_;
   ros::Subscriber dock_sub_;
   ros::Subscriber undock_sub_;
+  ros::Subscriber setpassive_sub_;
   ros::Subscriber define_song_sub_;
   ros::Subscriber play_song_sub_;
+  ros::Subscriber set_mainmot_sub_;
+  ros::Subscriber set_sidemot_sub_;
+  ros::Subscriber set_vacumot_sub_;
+  ros::Subscriber set_allmot_sub_;
 
   ros::Publisher odom_pub_;
   ros::Publisher clean_btn_pub_;

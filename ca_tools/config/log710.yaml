@@ -6,15 +6,15 @@ teleop:
     type: topic
     message_type: "geometry_msgs/Twist"
     topic_name: cmd_vel
-    deadman_buttons: [7]
+    deadman_buttons: []
     axis_mappings:
       -
-        axis: 3  # Right thumb stick (up/down)
+        axis: 4  # Right thumb stick (up/down)
         target: linear.x
         scale: 0.4
         offset: 0.0
       -
-        axis: 2  # Right thumb stick (left/right)
+        axis: 3  # Right thumb stick (left/right)
         target: angular.z
         scale: 2.5
         offset: 0.0
@@ -22,11 +22,87 @@ teleop:
     type: topic
     message_type: "std_msgs/Empty"
     topic_name: dock
-    deadman_buttons: [3, 7]  # RT + Y
+    deadman_buttons: [3, 6]  # LT + Y
     axis_mappings: []
   undock:
     type: topic
     message_type: "std_msgs/Empty"
     topic_name: undock
-    deadman_buttons: [1, 7]  # RT + A
+    deadman_buttons: [3, 7]  # RT + Y
     axis_mappings: []
+    
+  main_mot_up:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_main_mot
+    deadman_buttons: [1, 5]  # A + RB
+    message_value:
+      -
+        target: data
+        value: [1, 0.1]
+  main_mot_dn:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_main_mot
+    deadman_buttons: [1, 4] # A + LB
+    message_value:
+      - 
+        target: data
+        value: [-1, 0.1]
+        
+  side_mot_up:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_side_mot
+    deadman_buttons: [2, 5]  # B + RB
+    message_value:
+      -
+        target: data
+        value: [1, 0.1]
+  side_mot_dn:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_side_mot
+    deadman_buttons: [2, 4] # B + LB
+    message_value:
+      - 
+        target: data
+        value: [-1, 0.1]
+
+  vacu_mot_up:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_vacu_mot
+    deadman_buttons: [0, 5]  # X + RB
+    message_value:
+      -
+        target: data
+        value: [1, 0.1]
+  vacu_mot_dn:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_vacu_mot
+    deadman_buttons: [0, 4] # X + LB
+    message_value:
+      - 
+        target: data
+        value: [-1, 0.1]
+        
+  def_mot_on:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_all_mot
+    deadman_buttons: [3, 5]  # Y + RB
+    message_value:
+      -
+        target: data
+        value: [0.5, 0.4, 0.5]
+  def_mot_off:
+    type: topic
+    message_type: std_msgs/Float32MultiArray
+    topic_name: set_all_mot
+    deadman_buttons: [3, 4] # Y + LB
+    message_value:
+      - 
+        target: data
+        value: [0.0, 0.0, 0.0]

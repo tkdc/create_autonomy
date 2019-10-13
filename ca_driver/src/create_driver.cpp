@@ -30,6 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <tf/transform_datatypes.h>
 
 #include <string>
+#include <unistd.h>
 
 CreateDriver::CreateDriver(ros::NodeHandle& nh)
   : nh_(nh),
@@ -79,6 +80,7 @@ CreateDriver::CreateDriver(ros::NodeHandle& nh)
     ros::shutdown();
   }
 
+  ROS_INFO("[CREATE] tk version.");
   ROS_INFO("[CREATE] Connection established.");
 
   // Start in full control mode
@@ -119,8 +121,13 @@ CreateDriver::CreateDriver(ros::NodeHandle& nh)
   set_ascii_sub_ = nh.subscribe("set_ascii", 10, &CreateDriver::setASCIICallback, this);
   dock_sub_ = nh.subscribe("dock", 10, &CreateDriver::dockCallback, this);
   undock_sub_ = nh.subscribe("undock", 10, &CreateDriver::undockCallback, this);
+  setpassive_sub_ = nh.subscribe("set_passive", 10, &CreateDriver::setPassive, this);
   define_song_sub_ = nh.subscribe("define_song", 10, &CreateDriver::defineSongCallback, this);
   play_song_sub_ = nh.subscribe("play_song", 10, &CreateDriver::playSongCallback, this);
+  set_mainmot_sub_ = nh.subscribe("set_main_mot", 10, &CreateDriver::setMainMotor, this);
+  set_sidemot_sub_ = nh.subscribe("set_side_mot", 10, &CreateDriver::setSideMotor, this);
+  set_vacumot_sub_ = nh.subscribe("set_vacu_mot", 10, &CreateDriver::setVacuumMotor, this);
+  set_allmot_sub_ = nh.subscribe("set_all_mot", 10, &CreateDriver::setAllMotors, this);
 
   // Setup publishers
   odom_pub_ = nh.advertise<nav_msgs::Odometry>("odom", 30);
@@ -248,6 +255,71 @@ void CreateDriver::dockCallback(const std_msgs::EmptyConstPtr& msg)
   robot_->dock();
 }
 
+void CreateDriver::setPassive(const std_msgs::EmptyConstPtr& msg)
+{
+  // Switch PASSIVE mode
+  robot_->setMode(create::MODE_PASSIVE);
+}
+
+void CreateDriver::setAllMotors(const std_msgs::Float32MultiArrayConstPtr& msg)
+{
+  // set all motors
+  if (cnt_main_deb == 0) {
+    //ROS_INFO("[CREATE] Set All Motor: %.2f %.2f %.2f", msg->data[0], msg->data[1],  msg->data[2]);
+    robot_->setAllMotors(msg->data[0],msg->data[1],msg->data[2]);
+    cnt_main_deb = 5; /* set counter for debounce */
+  }
+}
+void CreateDriver::setMainMotor(const std_msgs::Float32MultiArrayConstPtr& msg) {
+  // set main motor
+  if (cnt_main_deb == 0) {
+    //ROS_INFO("[CREATE] Set Main Motor: %.2f - %.2f", msg->data[0], msg->data[1]);
+    robot_->setMainMotor(msg->data[0], msg->data[1]);
+    cnt_main_deb = 5; /* set counter for debounce */
+  } 
+}
+
+void CreateDriver::setSideMotor(const std_msgs::Float32MultiArrayConstPtr& msg) {
+  // set side motor
+  if (cnt_side_deb == 0) {
+    //ROS_INFO("[CREATE] Set Side Motor: %.2f - %.2f", msg->data[0], msg->data[1]);
+    robot_->setSideMotor(msg->data[0], msg->data[1]);
+    cnt_side_deb = 5; /* set counter for debounce */
+  }
+
+}
+
+void CreateDriver::setVacuumMotor(const std_msgs::Float32MultiArrayConstPtr& msg) {
+  // set vacuum motor
+  if (cnt_vacu_deb == 0) {
+    //ROS_INFO("[CREATE] Set Vacuum Motor: %.2f - %.2f", msg->data[0], msg->data[1]);
+    robot_->setVacuumMotor(msg->data[0], msg->data[1]);
+    cnt_vacu_deb = 5; /* set counter for debounce */
+  }
+}
+
+/* debouce user interface inputs to avoid multiple callbacks*/
+void CreateDriver::debouceSet(void) {
+  if (cnt_main_deb > 0) {
+    cnt_main_deb = cnt_main_deb - 1;
+    if (cnt_main_deb == 0) {
+      //ROS_INFO("[CREATE] Main Motor: debouce end" );
+    }
+  }
+  if (cnt_side_deb > 0) {
+    cnt_side_deb = cnt_side_deb - 1;
+    if (cnt_side_deb == 0) {
+      //ROS_INFO("[CREATE] Side Motor: debouce end" );
+    }
+  }
+  if (cnt_vacu_deb > 0) {
+    cnt_vacu_deb = cnt_vacu_deb - 1;
+    if (cnt_vacu_deb == 0) {
+      //ROS_INFO("[CREATE] Vacu Motor: debouce end" );
+    }
+  }
+}
+
 void CreateDriver::undockCallback(const std_msgs::EmptyConstPtr& msg)
 {
   // Switch robot back to FULL mode
@@ -280,6 +352,9 @@ bool CreateDriver::update()
   publishMode();
   publishBumperInfo();
   publishWheeldrop();
+
+  // debouce user input from (keyboard or joypad)
+  debouceSet();
 
   // If last velocity command was sent longer than latch duration, stop robot
   if (ros::Time::now() - last_cmd_vel_time_ >= ros::Duration(latch_duration_))
@@ -441,7 +516,7 @@ void CreateDriver::publishOdom()
   odom_msg_.twist.twist.angular.z = vel.yaw;
 
   // Update covariances
-  odom_msg_.pose.covariance[0] = static_cast<double>(pose.covariance[0]);
+  odom_msg_.pose.covariance[0] = static_cast<float>(pose.covariance[0]);
   odom_msg_.pose.covariance[1] = pose.covariance[1];
   odom_msg_.pose.covariance[5] = pose.covariance[2];
   odom_msg_.pose.covariance[6] = pose.covariance[3];
@@ -632,6 +707,12 @@ void CreateDriver::spinOnce()
 
 void CreateDriver::spin()
 {
+
+  // init debounce
+  cnt_main_deb = 0;
+  cnt_side_deb = 0;
+  cnt_vacu_deb = 0;
+
   ros::Rate rate(loop_hz_);
   while (ros::ok())
   {
